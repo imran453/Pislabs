@@ -1,0 +1,15 @@
+avatar1.png|https://www.figma.com/api/mcp/asset/3bb5d7cb-0190-45a0-863c-6d9738ef362c.png
+avatar2.png|https://www.figma.com/api/mcp/asset/36d29d18-f8c7-4716-abc9-9f5f2eeb7872.png
+avatar3.png|https://www.figma.com/api/mcp/asset/92a6a968-2065-4c2f-8d80-01c320b2684b.png
+hero-frame.png|https://www.figma.com/api/mcp/asset/acd8ae19-a68f-4586-a523-41c7146dea23.png
+step-img-1.png|https://www.figma.com/api/mcp/asset/606bcb3f-52be-4843-8768-f98309502ab6.png
+step-img-2.png|https://www.figma.com/api/mcp/asset/0c32b4f6-a866-48b6-80cf-1f5b51f8bb27.png
+step-img-3.png|https://www.figma.com/api/mcp/asset/9294a5b1-c552-4023-8b08-22f66da01502.png
+step-img-4.png|https://www.figma.com/api/mcp/asset/78b2bb44-7159-4947-8c97-e242dffd3366.png
+icon-linkedin.svg|https://www.figma.com/api/mcp/asset/5d7a6cf8-9a08-4c3a-b665-52e5af6059d2.svg
+icon-twitter.svg|https://www.figma.com/api/mcp/asset/9670ad07-0017-4900-8e4b-58e505115606.svg
+icon-instagram.svg|https://www.figma.com/api/mcp/asset/decf4de6-0109-43ed-b8c0-235ad6b9e24c.svg
+line121.svg|https://www.figma.com/api/mcp/asset/873f0a0e-c301-4147-9ab8-054d3e8256aa.svg
+vector-arrow.svg|https://www.figma.com/api/mcp/asset/7d97db48-7c73-47cb-b019-487b22f523c3.svg
+ellipse.svg|https://www.figma.com/api/mcp/asset/920fd905-9663-4a4d-899b-56c26253a0ca.svg
+ellipse1.svg|https://www.figma.com/api/mcp/asset/cd6dcafd-424b-469f-85e9-7a57c74f59f5.svg
