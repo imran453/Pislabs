@@ -36,26 +36,19 @@ const steps = [
   },
 ];
 
-
 /*
 ============================================================
 MAIN
+
+Desktop keeps the original sticky/scroll-jacked track exactly
+as it was. Mobile no longer tries to replicate that with
+synchronized height math (rowHeight / section vh / trackY all
+had to match perfectly and kept desyncing) — it's just normal
+stacked content that flows with natural scroll instead.
 ============================================================
 */
 
 export default function HowItWorks() {
-  const sectionRef = useRef(null);
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
-
-  // Mobile stacks text above the video card (full width each) instead of
-  // side-by-side, so each row needs to be taller to fit both comfortably.
-  // The scroll-jacking math below depends on rowHeight exactly matching
-  // the real rendered row height, so this has to be tracked in JS, not
-  // just changed with a CSS breakpoint.
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -67,605 +60,213 @@ export default function HowItWorks() {
     return () => window.removeEventListener("resize", checkWidth);
   }, []);
 
-  /*
-  ============================================================
-  HEADING
-  ============================================================
+  if (isMobile) {
+    return <MobileHowItWorks />;
+  }
 
-  Visible only when the section is exactly at the beginning.
+  return <DesktopHowItWorks />;
+}
 
-  As soon as scrolling starts:
-      opacity = 0
+/*
+============================================================
+MOBILE — plain stacked flow, no pinning, no scroll-jacking.
+Numbered, title, and body are left-aligned and bold, matching
+the reference.
+============================================================
+*/
 
-  It stays completely invisible while scrolling.
+function MobileHowItWorks() {
+  return (
+    <section id="how-it-works" className="relative bg-black text-white px-6 pt-20 pb-16">
+      <div className="text-center mb-14">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <span className="font-display font-bold text-[38px] leading-none">How</span>
+          <span className="bg-brand text-black px-3 py-1 rounded-full font-display font-bold text-[38px] leading-none">
+            PIS labs
+          </span>
+        </div>
+        <span className="font-display font-bold text-[38px] leading-none block mt-1">
+          works
+        </span>
+      </div>
 
-  It only appears again when the section returns
-  completely to the top.
+      <div className="flex flex-col gap-16">
+        {steps.map((step) => (
+          <motion.div
+            key={step.num}
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col"
+          >
+            <div className="text-left">
+              <p className="font-display font-bold text-[38px] leading-none text-white">
+                {step.num}
+              </p>
+              <p className="font-display font-bold text-[30px] leading-[1.1] tracking-[-0.5px] text-white mt-3">
+                {step.title}
+              </p>
+              <p className="font-display font-normal text-[18px] leading-[1.3] text-white/70 mt-2 max-w-[320px]">
+                {step.body}
+              </p>
+            </div>
 
-  There is NO background/frame behind the heading.
-  ============================================================
-  */
+                        <div
+              className="relative w-full aspect-[9/14] rounded-[20px] overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.35)] mt-8"
+              style={{ backgroundColor: step.cardBg }}
+            > 
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                className="absolute inset-0 w-full h-full object-cover"
+              >
+                <source src={step.video} type="video/mp4" />
+              </video>
+              <div className="absolute inset-0 bg-black/[0.03] pointer-events-none" />
+              <div className="absolute inset-0 rounded-[20px] border border-white/10 pointer-events-none" />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/*
+============================================================
+DESKTOP — unchanged from before the mobile work started.
+============================================================
+*/
+
+function DesktopHowItWorks() {
+  const sectionRef = useRef(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end end"],
+  });
 
   const headingOpacity = useTransform(
-  scrollYProgress,
-  (value) => (value <= 0 ? 1 : 0)
-);
+    scrollYProgress,
+    (value) => (value <= 0 ? 1 : 0)
+  );
 
-  /*
-  ============================================================
-  TRACK
-  ============================================================
-
-  rowHeight controls the distance between each step.
-
-  titleSpacing gives the first card/content extra breathing
-  room below the heading.
-
-  The same amount is added to the total track movement so
-  the LAST CARD stays in the same position as before.
-  ============================================================
-  */
-
-    // Taller on mobile since text + video card stack vertically there
-  // instead of sitting side-by-side.
-  const rowHeight = isMobile ? 900 : 560; 
-
-  // Extra space between the heading area and the first content.
+  const rowHeight = 560;
   const titleSpacing = 120;
 
   const trackY = useTransform(
     scrollYProgress,
     [0, 1],
-    [
-      0,
-      -(
-        rowHeight * (steps.length - 1) +
-        titleSpacing
-      ),
-    ]
+    [0, -(rowHeight * (steps.length - 1) + titleSpacing)]
   );
 
-
   return (
-        <section
+    <section
       id="how-it-works"
       ref={sectionRef}
-      className="
-        relative
-        bg-black
-        text-white
-      "
-      style={{
-        // 400vh was tuned for desktop's 560px rowHeight. Mobile rows are
-        // taller (text stacked above a full-width video card instead of
-        // side-by-side), so the scrollable distance has to grow by the
-        // same proportion — otherwise scrolling runs out before reaching
-        // the later steps, which is exactly what was happening.
-        height: `${400 * (rowHeight / 560)}vh`,
-      }}
+      className="relative h-[400vh] bg-black text-white"
     >
-
-      {/* ====================================================
-          STICKY FRAME
-          ==================================================== */}
-
-      <div
-        className="
-          sticky
-          top-0
-          h-screen
-          overflow-hidden
-          bg-black
-        "
-      >
-
-
-        {/* ==================================================
-            HEADING
-
-            NO BACKGROUND.
-
-            ONLY THE TEXT.
-
-            It is centered at the top.
-
-            It disappears completely once scrolling starts.
-            ================================================== */}
-
+      <div className="sticky top-0 h-screen overflow-hidden bg-black">
         <motion.div
-          style={{
-            opacity: headingOpacity,
-          }}
-          className="
-            absolute
-            top-[55px]
-
-            left-1/2
-            -translate-x-1/2
-
-            z-[500]
-
-            flex
-            flex-col
-            items-center
-            justify-center
-
-            text-center
-
-            pointer-events-none
-            whitespace-nowrap
-
-            w-max
-          "
+          style={{ opacity: headingOpacity }}
+          className="absolute top-[55px] left-1/2 -translate-x-1/2 z-[500] flex flex-col items-center justify-center text-center pointer-events-none whitespace-nowrap w-max"
         >
-
-          {/* FIRST LINE */}
-
-          <div
-            className="
-              flex
-              items-center
-              justify-center
-              gap-2
-            "
-          >
-
-            <span
-              className="
-                font-display
-                font-bold
-
-                text-[38px]
-                md:text-[48px]
-
-                leading-none
-              "
-            >
+          <div className="flex items-center justify-center gap-2">
+            <span className="font-display font-bold text-[38px] md:text-[48px] leading-none">
               How
             </span>
-
-
-            <span
-              className="
-                bg-brand
-                text-black
-
-                px-3
-                py-1
-
-                rounded-full
-
-                font-display
-                font-bold
-
-                text-[38px]
-                md:text-[48px]
-
-                leading-none
-              "
-            >
+            <span className="bg-brand text-black px-3 py-1 rounded-full font-display font-bold text-[38px] md:text-[48px] leading-none">
               PIS labs
             </span>
-
           </div>
-
-
-          {/* SECOND LINE */}
-
-          <span
-            className="
-              font-display
-              font-bold
-
-              text-[38px]
-              md:text-[48px]
-
-              leading-none
-
-              mt-1
-            "
-          >
+          <span className="font-display font-bold text-[38px] md:text-[48px] leading-none mt-1">
             works
           </span>
-
         </motion.div>
 
-
-        {/* ==================================================
-            CONTENT FRAME
-
-            overflow-visible is preserved so the final card
-            does NOT get clipped.
-            ================================================== */}
-
-        <div
-          className="
-            absolute
-            inset-0
-
-            max-w-[1100px]
-            mx-auto
-
-            px-6
-            md:px-10
-
-            overflow-visible
-          "
-        >
-
-          {/* =================================================
-              VERTICAL TRACK
-
-              EXTRA TOP SPACING IS ADDED HERE.
-
-              This pushes the first card/content lower,
-              creating a clear gap below the heading.
-
-              The bottom spacing remains unchanged so the
-              final card behavior is preserved.
-              ================================================= */}
-
+        <div className="absolute inset-0 max-w-[1100px] mx-auto px-6 md:px-10 overflow-visible">
           <motion.div
             style={{
               y: trackY,
+              paddingTop: `calc((100vh - ${rowHeight}px) / 2 + 120px)`,
+              paddingBottom: `calc((100vh - ${rowHeight}px) / 2)`,
             }}
-                        className="
-              relative
-              w-full
-
-              flex
-              flex-col
-
-              overflow-visible
-            "
-            style={
-              isMobile
-                ? { paddingTop: "220px", paddingBottom: "80px" }
-                : {
-                    paddingTop: `calc((100vh - ${rowHeight}px) / 2 + 120px)`,
-                    paddingBottom: `calc((100vh - ${rowHeight}px) / 2)`,
-                  }
-            }
-          > 
-
-                        {steps.map((step, index) => (
-              <StepRow
-                key={step.num}
-                step={step}
-                index={index}
-                isMobile={isMobile}
-                rowHeight={rowHeight}
-              />
+            className="relative w-full flex flex-col overflow-visible"
+          >
+            {steps.map((step) => (
+              <StepRow key={step.num} step={step} />
             ))}
-
           </motion.div>
-
         </div>
 
-
-        {/* ==================================================
-            STEP INDICATORS
-            ================================================== */}
-
-        <div
-          className="
-            absolute
-
-            right-6
-            md:right-10
-
-            bottom-8
-
-            z-[600]
-
-            flex
-            flex-col
-            gap-2
-          "
-        >
-
+        <div className="absolute right-6 md:right-10 bottom-8 z-[600] flex flex-col gap-2">
           {steps.map((_, index) => (
-            <StepIndicator
-              key={index}
-              index={index}
-              progress={scrollYProgress}
-            />
+            <StepIndicator key={index} index={index} progress={scrollYProgress} />
           ))}
-
         </div>
-
       </div>
-
     </section>
   );
 }
 
-
-/*
-============================================================
-STEP ROW
-============================================================
-*/
-
-function StepRow({ step, isMobile, rowHeight }) {
+function StepRow({ step }) {
   return (
-    <div
-      className="
-        relative
-
-        w-full
-
-        shrink-0
-
-        flex
-        flex-col
-        md:flex-row
-        items-center
-
-        overflow-visible
-      "
-      style={{ height: `${rowHeight}px` }}
-    >
-
-      {/* ==================================================
-          LEFT CONTENT — full width on mobile, sits on top
-          ================================================== */}
-
-      <div
-        className="
-          w-full
-          md:w-[46%]
-
-          flex
-          flex-col
-          justify-center
-
-          text-center
-          md:text-left
-          items-center
-          md:items-start
-
-          px-2
-          md:px-0
-          md:pr-10
-
-          pb-6
-          md:pb-0
-        "
-      >
-
-        {/* NUMBER */}
-
-        <p
-          className="
-            font-display
-            font-semibold
-
-            text-[42px]
-            md:text-[52px]
-
-            leading-none
-
-            text-white
-          "
-        >
+    <div className="relative h-[560px] w-full shrink-0 flex items-center overflow-visible">
+      <div className="w-[46%] flex flex-col justify-center pr-6 md:pr-10">
+        <p className="font-display font-semibold text-[42px] md:text-[52px] leading-none text-white">
           {step.num}
         </p>
-
-
-        {/* TITLE */}
-
-        <p
-          className="
-            font-display
-            font-bold
-
-            text-[32px]
-            md:text-[42px]
-
-            leading-[1.05]
-
-            tracking-[-1px]
-
-            text-white
-
-            mt-5
-          "
-        >
+        <p className="font-display font-bold text-[32px] md:text-[42px] leading-[1.05] tracking-[-1px] text-white mt-5">
           {step.title}
         </p>
-
-
-        {/* BODY */}
-
-        <p
-          className="
-            font-display
-            font-normal
-
-            text-[20px]
-            md:text-[25px]
-
-            leading-[1.15]
-
-            text-white/70
-
-            mt-2
-
-            max-w-[400px]
-          "
-        >
+        <p className="font-display font-normal text-[20px] md:text-[25px] leading-[1.15] text-white/70 mt-2 max-w-[400px]">
           {step.body}
         </p>
-
       </div>
 
-
-        {/* ==================================================
-          RIGHT VIDEO CARD — full width on mobile, sits below
-          ================================================== */}
-
-      <div
-        className="
-          w-full
-          md:w-[54%]
-
-          flex
-          items-center
-          justify-center
-
-          pl-0
-          md:pl-4
-
-          overflow-visible
-        "
-      >
-
+      <div className="w-[54%] flex items-center justify-center pl-4 overflow-visible">
         <div
-          className="
-            relative
-
-            w-[260px]
-            sm:w-[280px]
-            md:w-[280px]
-            lg:w-[320px]
-
-            aspect-[9/14]
-
-            rounded-[20px]
-
-            overflow-hidden
-
-            shrink-0
-
-            shadow-[0_25px_70px_rgba(0,0,0,0.35)]
-          "
-          style={{
-            backgroundColor: step.cardBg,
-          }}
+          className="relative w-[250px] md:w-[280px] lg:w-[320px] aspect-[9/14] rounded-[20px] overflow-hidden shrink-0 shadow-[0_25px_70px_rgba(0,0,0,0.35)]"
+          style={{ backgroundColor: step.cardBg }}
         >
-
-          {/* VIDEO */}
-
           <video
             autoPlay
             muted
             loop
             playsInline
             preload="auto"
-            className="
-              absolute
-              inset-0
-
-              w-full
-              h-full
-
-              object-cover
-            "
+            className="absolute inset-0 w-full h-full object-cover"
           >
-
-            <source
-              src={step.video}
-              type="video/mp4"
-            />
-
+            <source src={step.video} type="video/mp4" />
           </video>
-
-
-          {/* OVERLAY */}
-
-          <div
-            className="
-              absolute
-              inset-0
-
-              bg-black/[0.03]
-
-              pointer-events-none
-            "
-          />
-
-
-          {/* BORDER */}
-
-          <div
-            className="
-              absolute
-              inset-0
-
-              rounded-[20px]
-
-              border
-              border-white/10
-
-              pointer-events-none
-            "
-          />
-
+          <div className="absolute inset-0 bg-black/[0.03] pointer-events-none" />
+          <div className="absolute inset-0 rounded-[20px] border border-white/10 pointer-events-none" />
         </div>
-
       </div>
-
     </div>
   );
 }
 
-
-/*
-============================================================
-STEP INDICATOR
-============================================================
-*/
-
 function StepIndicator({ index, progress }) {
-
   const start = index / steps.length;
   const center = (index + 0.5) / steps.length;
   const end = (index + 1) / steps.length;
 
-
   const opacity = useTransform(
     progress,
-    [
-      Math.max(0, start),
-      center,
-      Math.min(1, end),
-    ],
-    [
-      0.3,
-      1,
-      0.3,
-    ]
+    [Math.max(0, start), center, Math.min(1, end)],
+    [0.3, 1, 0.3]
   );
-
 
   const scale = useTransform(
     progress,
-    [
-      Math.max(0, start),
-      center,
-      Math.min(1, end),
-    ],
-    [
-      1,
-      1.5,
-      1,
-    ]
+    [Math.max(0, start), center, Math.min(1, end)],
+    [1, 1.5, 1]
   );
 
-
-  return (
-    <motion.span
-      style={{
-        opacity,
-        scale,
-      }}
-      className="
-        block
-        size-2
-        rounded-full
-        bg-white
-      "
-    />
-  );
+  return <motion.span style={{ opacity, scale }} className="block size-2 rounded-full bg-white" />;
 }
