@@ -52,6 +52,9 @@ export default function BuildingSweep() {
   const [viewport, setViewport] = useState({ w: 1200, h: 800 });
   const [videoFailed, setVideoFailed] = useState(false);
 
+  const mobileIntroRef = useRef(null);
+  const [mobileProgress, setMobileProgress] = useState(0);
+
   useEffect(() => {
     let ticking = false;
 
@@ -71,6 +74,22 @@ export default function BuildingSweep() {
 
             setProgress(
               clamp(scrolled / scrollableHeight, 0, 1)
+            );
+          }
+        }
+
+        const introEl = mobileIntroRef.current;
+
+        if (introEl) {
+          const introRect = introEl.getBoundingClientRect();
+          const introScrollable =
+            introEl.offsetHeight - window.innerHeight;
+
+          if (introScrollable > 0) {
+            const introScrolled = -introRect.top;
+
+            setMobileProgress(
+              clamp(introScrolled / introScrollable, 0, 1)
             );
           }
         }
@@ -275,11 +294,204 @@ export default function BuildingSweep() {
   const panelTrackLeft =
     (finalFrameWidth - viewport.w) / 2;
 
+  /*
+  ============================================================
+  MOBILE INTRO GROWTH + SPOTLIGHT LIST
+
+  Same idea as the desktop purple-frame growth above, just
+  without the horizontal panel sweep. The whole thing stays
+  pinned for one continuous scroll: the circle grows into a
+  full-bleed frame fairly quickly near the top, the video
+  fades out as it's enveloped, then a vertical list (intro
+  line, then each stat) cycles through inside the frame —
+  the line nearest "current" sits at full opacity, its
+  neighbors dimmed, like the reference recording.
+  ============================================================
+  */
+
+    const M_VIDEO_SIZE = 220;
+
+  const M_GROWTH_END = 0.14;
+
+  const mGrowth = mapRange(mobileProgress, 0.02, M_GROWTH_END, 0, 1);
+
+  // both dimensions now target the actual viewport, not a hardcoded
+  // height — that hardcoded "460" was capping the frame well short of
+  // the screen's real height on every phone, which is why it never
+  // reached true edge-to-edge like the reference.
+  const mFrameWidth = lerp(M_VIDEO_SIZE, viewport.w * 1.02, mGrowth);
+  const mFrameHeight = lerp(M_VIDEO_SIZE, viewport.h * 1.02, mGrowth);
+ const mFrameTopRadius = lerp(M_VIDEO_SIZE / 2, 40, mGrowth);
+  const mFrameBottomRadius = lerp(M_VIDEO_SIZE / 2, 40, mGrowth);
+  const mVideoOpacity = mapRange(mobileProgress, 0.06, M_GROWTH_END, 1, 0);
+
+  const mobileItems = [
+    {
+      isIntro: true,
+      title: "One community. One YouTube channel.",
+      body: "We bring creators together around one simple goal: consistently producing great videos for a shared channel.",
+    },
+    ...stats,
+  ];
+
+  const LIST_FADE_START = M_GROWTH_END;
+  const LIST_FADE_END = M_GROWTH_END + 0.04;
+  const LIST_START = LIST_FADE_END;
+  const LIST_END = 0.96;
+
+  const mListOpacity = mapRange(
+    mobileProgress,
+    LIST_FADE_START,
+    LIST_FADE_END,
+    0,
+    1
+  );
+
+  const mCurrentIndex = mapRange(
+    mobileProgress,
+    LIST_START,
+    LIST_END,
+    0,
+    mobileItems.length - 1
+  );
+
+  const M_ITEM_HEIGHT = 230;
+
   return (
+    <section id="building" className="relative">
+
+      {/* ==================================================
+          MOBILE / TABLET VERSION
+
+          The desktop sweep below relies on scroll-jacked
+          horizontal panels sized off the viewport width, which
+          only makes sense on wide screens. Mobile keeps the
+          same "pin the whole thing while scrolling drives an
+          animation" idea, just laid out vertically: the circle
+          grows into a full-bleed frame near the top, then a
+          vertical list (intro line, then each stat) cycles
+          through — the line nearest "current" sits at full
+          opacity, its neighbors dimmed, matching the reference
+          recording.
+          ================================================== */}
+
+      <div className="lg:hidden bg-white">
+        <div ref={mobileIntroRef} className="relative h-[550vh]">
+          <div className="sticky top-0 h-screen w-full overflow-hidden bg-white">
+
+            {/* GROWING PURPLE FRAME */}
+
+            <div
+              className="absolute overflow-hidden bg-brand"
+              style={{
+                width: `${mFrameWidth}px`,
+                height: `${mFrameHeight}px`,
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                borderRadius: `${mFrameTopRadius}px ${mFrameTopRadius}px ${mFrameBottomRadius}px ${mFrameBottomRadius}px`,
+                willChange: "width, height, border-radius",
+              }}
+            >
+              <img
+                src={vectorSwirl}
+                alt=""
+                className="absolute -top-[8%] left-[25%] w-[70%] opacity-40 pointer-events-none select-none"
+              />
+            </div>
+
+            {/* VIDEO, fades out as the frame envelops it */}
+
+            <div
+              className="absolute left-1/2 top-1/2 z-10 w-[220px] h-[220px] rounded-full overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+              style={{
+                transform: "translate(-50%, -50%)",
+                opacity: mVideoOpacity,
+              }}
+            >
+              {!videoFailed ? (
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  onError={() => setVideoFailed(true)}
+                  className="absolute inset-0 w-full h-full object-cover"
+                >
+                  <source src={VIDEO_SRC} type="video/mp4" />
+                </video>
+              ) : (
+                <div className="absolute inset-0 bg-black/10 flex items-center justify-center text-black/40 text-xs font-body px-6 text-center">
+                  Add "hero-video.mp4" to your /public folder
+                </div>
+              )}
+            </div>
+
+            {/* SPOTLIGHT LIST: intro line, then each stat. Every
+                item sits stacked M_ITEM_HEIGHT apart; the whole
+                stack shifts so "current" always centers in the
+                frame, and each item's own opacity fades out the
+                further it sits from current. */}
+
+            <div
+              className="absolute inset-x-8 top-1/2 z-10 text-center"
+              style={{
+                opacity: mListOpacity,
+                transform: `translateY(${
+                  -(mCurrentIndex * M_ITEM_HEIGHT) - M_ITEM_HEIGHT / 2
+                }px)`,
+              }}
+            >
+              {mobileItems.map((item, i) => {
+                const distance = Math.abs(i - mCurrentIndex);
+                const itemOpacity = mapRange(distance, 0, 2, 1, 0.35);
+
+                return (
+                  <div
+                    key={item.isIntro ? "intro" : `${item.title}-${i}`}
+                    style={{
+                      height: `${M_ITEM_HEIGHT}px`,
+                      opacity: itemOpacity,
+                    }}
+                    className="flex flex-col items-center justify-center"
+                  >
+                    {item.isIntro ? (
+                      <>
+                        <p className="font-display font-bold text-white text-[9vw] leading-[1.05] tracking-[-1px]">
+                          {item.title}
+                        </p>
+                        <p className="mt-4 text-white/70 font-body text-sm max-w-sm">
+                          {item.body}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-white/50 font-display font-semibold text-sm mb-2">
+                          {item.num}
+                        </span>
+                        <p className="font-display font-bold text-white text-[12vw] leading-none tracking-[-1px]">
+                          {item.title}
+                        </p>
+                        <p className="mt-3 text-white/70 font-body text-sm max-w-[280px]">
+                          {item.body}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          DESKTOP VERSION (unchanged)
+          ================================================== */}
+
     <div
       ref={trackRef}
-      id="building"
-      className="relative h-[450vh]"
+      className="relative h-[450vh] hidden lg:block"
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-white">
 
@@ -438,5 +650,6 @@ export default function BuildingSweep() {
 
       </div>
     </div>
+    </section>
   );
 }

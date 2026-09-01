@@ -3,7 +3,7 @@ import {
   useScroll,
   useTransform,
 } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const steps = [
   {
@@ -51,6 +51,21 @@ export default function HowItWorks() {
     offset: ["start start", "end end"],
   });
 
+  // Mobile stacks text above the video card (full width each) instead of
+  // side-by-side, so each row needs to be taller to fit both comfortably.
+  // The scroll-jacking math below depends on rowHeight exactly matching
+  // the real rendered row height, so this has to be tracked in JS, not
+  // just changed with a CSS breakpoint.
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    function checkWidth() {
+      setIsMobile(window.innerWidth < 768);
+    }
+    checkWidth();
+    window.addEventListener("resize", checkWidth);
+    return () => window.removeEventListener("resize", checkWidth);
+  }, []);
 
   /*
   ============================================================
@@ -91,7 +106,9 @@ export default function HowItWorks() {
   ============================================================
   */
 
-  const rowHeight = 560;
+    // Taller on mobile since text + video card stack vertically there
+  // instead of sitting side-by-side.
+  const rowHeight = isMobile ? 900 : 560; 
 
   // Extra space between the heading area and the first content.
   const titleSpacing = 120;
@@ -110,15 +127,22 @@ export default function HowItWorks() {
 
 
   return (
-    <section
+        <section
       id="how-it-works"
       ref={sectionRef}
       className="
         relative
-        h-[400vh]
         bg-black
         text-white
       "
+      style={{
+        // 400vh was tuned for desktop's 560px rowHeight. Mobile rows are
+        // taller (text stacked above a full-width video card instead of
+        // side-by-side), so the scrollable distance has to grow by the
+        // same proportion — otherwise scrolling runs out before reaching
+        // the later steps, which is exactly what was happening.
+        height: `${400 * (rowHeight / 560)}vh`,
+      }}
     >
 
       {/* ====================================================
@@ -285,7 +309,7 @@ export default function HowItWorks() {
             style={{
               y: trackY,
             }}
-            className="
+                        className="
               relative
               w-full
 
@@ -293,17 +317,24 @@ export default function HowItWorks() {
               flex-col
 
               overflow-visible
-
-              pt-[calc((100vh-560px)/2+120px)]
-              pb-[calc((100vh-560px)/2)]
             "
-          >
+            style={
+              isMobile
+                ? { paddingTop: "220px", paddingBottom: "80px" }
+                : {
+                    paddingTop: `calc((100vh - ${rowHeight}px) / 2 + 120px)`,
+                    paddingBottom: `calc((100vh - ${rowHeight}px) / 2)`,
+                  }
+            }
+          > 
 
-            {steps.map((step, index) => (
+                        {steps.map((step, index) => (
               <StepRow
                 key={step.num}
                 step={step}
                 index={index}
+                isMobile={isMobile}
+                rowHeight={rowHeight}
               />
             ))}
 
@@ -356,38 +387,50 @@ STEP ROW
 ============================================================
 */
 
-function StepRow({ step }) {
+function StepRow({ step, isMobile, rowHeight }) {
   return (
     <div
       className="
         relative
 
-        h-[560px]
         w-full
 
         shrink-0
 
         flex
+        flex-col
+        md:flex-row
         items-center
 
         overflow-visible
       "
+      style={{ height: `${rowHeight}px` }}
     >
 
       {/* ==================================================
-          LEFT CONTENT
+          LEFT CONTENT — full width on mobile, sits on top
           ================================================== */}
 
       <div
         className="
-          w-[46%]
+          w-full
+          md:w-[46%]
 
           flex
           flex-col
           justify-center
 
-          pr-6
+          text-center
+          md:text-left
+          items-center
+          md:items-start
+
+          px-2
+          md:px-0
           md:pr-10
+
+          pb-6
+          md:pb-0
         "
       >
 
@@ -458,19 +501,21 @@ function StepRow({ step }) {
       </div>
 
 
-      {/* ==================================================
-          RIGHT VIDEO CARD
+        {/* ==================================================
+          RIGHT VIDEO CARD — full width on mobile, sits below
           ================================================== */}
 
       <div
         className="
-          w-[54%]
+          w-full
+          md:w-[54%]
 
           flex
           items-center
           justify-center
 
-          pl-4
+          pl-0
+          md:pl-4
 
           overflow-visible
         "
@@ -480,7 +525,8 @@ function StepRow({ step }) {
           className="
             relative
 
-            w-[250px]
+            w-[260px]
+            sm:w-[280px]
             md:w-[280px]
             lg:w-[320px]
 

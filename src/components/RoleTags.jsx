@@ -313,7 +313,7 @@ export default function RoleTags() {
   return (
     <section
       ref={tagsRef}
-      className="px-6 py-24 min-h-[130vh]"
+      className="px-6 py-24 lg:min-h-[130vh]"
     >
       <div
         className="
@@ -370,11 +370,102 @@ export default function RoleTags() {
         </Reveal>
 
         {/* =================================================
-            RAINFALL STAGE
+            MOBILE / TABLET TAG CLOUD
+
+            The desktop rainfall below places tags with absolute
+            left% positions tuned for a ~1320px stage, then drops
+            them in with up to 135px of horizontal drift. Neither
+            of those numbers means anything on a phone-width
+            screen — the tags land (and pass through) past the
+            right edge no matter what. Mobile instead gets a
+            plain wrapping flex layout: same colors/rotations,
+            but it's real document flow, so it can never overflow
+            the viewport.
+            ================================================= */}
+
+               <div className="lg:hidden mt-10 relative w-full max-w-[420px] h-[400px]">
+          {/*
+            Compact overlapping cluster, matching the reference — tags
+            stack close together with real overlap and mixed rotation,
+            not a neatly wrapped list. Positions are hand-placed
+            percentages within this fixed-height stage, roughly mirroring
+            the reference's 3-row cluster shape.
+          */}
+          {[
+            { top: "2%", left: "2%" },
+            { top: "0%", left: "34%" },
+            { top: "4%", left: "62%" },
+            { top: "14%", left: "0%" },
+            { top: "16%", left: "58%" },
+            { top: "26%", left: "20%" },
+            { top: "24%", left: "68%" },
+            { top: "38%", left: "4%" },
+            { top: "40%", left: "44%" },
+            { top: "50%", left: "16%" },
+            { top: "48%", left: "70%" },
+            { top: "60%", left: "38%" },
+            { top: "62%", left: "0%" },
+            { top: "70%", left: "56%" },
+            { top: "72%", left: "20%" },
+          ].map((pos, index) => {
+            const tag = tags[index];
+            return (
+              <motion.span
+                key={`${tag.text}-mobile-${index}`}
+                initial={{
+                  opacity: 0,
+                  y: -80,
+                  rotate: tag.rotate - 15,
+                }}
+                whileInView={{
+                  opacity: 1,
+                  y: 0,
+                  rotate: tag.rotate,
+                }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{
+                  duration: 0.5,
+                  delay: (index % 8) * 0.06,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                style={{
+                  position: "absolute",
+                  top: pos.top,
+                  left: pos.left,
+                  backgroundColor: tag.bg,
+                  color: tag.color || "#000",
+                  zIndex: index,
+                }}
+                className={`
+                  font-accent
+                  font-semibold
+                  px-3.5
+                  py-2
+                  rounded-xl
+                  whitespace-nowrap
+                  shadow-sm
+                  select-none
+
+                  ${tag.big ? "text-sm" : "text-xs"}
+
+                  ${tag.strike ? "line-through" : ""}
+                `}
+              >
+                {tag.text}
+              </motion.span>
+            );
+          })}
+        </div>
+
+        {/* =================================================
+            DESKTOP RAINFALL STAGE (unchanged)
             ================================================= */}
 
         <div
           className="
+            hidden
+            lg:block
+
             relative
             w-full
             max-w-[1320px]
